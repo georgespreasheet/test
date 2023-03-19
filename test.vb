@@ -1,3 +1,6 @@
+
+'Test saisies
+
 ' Déclaration des variables
 Dim sapConn As Object
 Dim sapGuiAuto As Object
