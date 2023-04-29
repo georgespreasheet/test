@@ -161,7 +161,7 @@ End If
 
 ' Rouvrir SAP si nécessaire
 If sapClosed Then
-    objShell.Run sapLogonPath, 1, False
+    objShell.Exec """" & sapLogonPath & """"
 End If
 
 Set objExec = Nothing
