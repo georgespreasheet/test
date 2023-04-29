@@ -124,12 +124,14 @@ End If
 
 
 ' Script de surveillance (Monitor.vbs)
-Dim objShell, objExec, sapClosed, inactivityCounter, timeout, checkInterval
+' Script de surveillance (Monitor.vbs)
+Dim objShell, objExec, sapClosed, inactivityCounter, timeout, checkInterval, sapLogonPath
 
 sapClosed = False
 inactivityCounter = 0
 timeout = 300000 ' Temps d'inactivité en millisecondes (5 minutes dans cet exemple)
 checkInterval = 1000 ' Intervalle de vérification en millisecondes (1 seconde dans cet exemple)
+sapLogonPath = "C:\Program Files (x86)\SAP\FrontEnd\SAPgui\saplogon.exe" ' Chemin d'accès à SAP Logon (adaptez-le à votre installation)
 
 Set objShell = CreateObject("WScript.Shell")
 
@@ -157,11 +159,15 @@ If objExec.ExitCode <> 0 Then
     sapClosed = True
 End If
 
+' Rouvrir SAP si nécessaire
+If sapClosed Then
+    objShell.Run sapLogonPath, 1, False
+End If
+
 Set objExec = Nothing
 Set objShell = Nothing
 
-' Afficher un message si SAP a été fermé en raison d'une erreur ou d'inactivité
+' Afficher un message si SAP a été fermé en raison d'une erreur ou d'un temps d'inactivité dépassé
 If sapClosed Then
-    MsgBox "SAP a été fermé en raison d'une erreur dans le script ou d'un temps d'inactivité dépassé."
+    MsgBox "SAP a été fermé en raison d'une erreur dans le script ou d'un temps d'inactivité dépassé et a été rouvert."
 End If
-
