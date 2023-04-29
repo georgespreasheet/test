@@ -92,3 +92,32 @@ Do
     ' Attendre avant de vérifier à nouveau les messages d'erreur
     WScript.Sleep 1000
 Loop While hasError ' continuer la boucle tant qu'une erreur est trouvée
+
+Dim objShell, objExec, sapClosed
+
+sapClosed = False
+
+Set objShell = CreateObject("WScript.Shell")
+
+' Exécuter le script principal
+Set objExec = objShell.Exec("wscript MainScript.vbs")
+
+' Surveiller le script principal pour détecter les erreurs
+Do While objExec.Status = 0
+    WScript.Sleep 1000
+Loop
+
+' Si une erreur se produit, fermer SAP
+If objExec.ExitCode <> 0 Then
+    objShell.Run "taskkill /F /IM saplogon.exe", 0, True
+    sapClosed = True
+End If
+
+Set objExec = Nothing
+Set objShell = Nothing
+
+' Afficher un message si SAP a été fermé en raison d'une erreur
+If sapClosed Then
+    MsgBox "SAP a été fermé en raison d'une erreur dans le script."
+End If
+
