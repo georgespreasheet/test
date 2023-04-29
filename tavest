@@ -63,14 +63,23 @@ session.findById("wnd[0]").sendVKey 15
 
 
 ' Ajout du code pour gérer les messages d'erreur
+Dim errorMessage, hasError, errorWindow
+hasError = False ' initialiser la variable à False
+
+' Boucle pour gérer les messages d'erreur automatiquement
 Do
     ' Vérifier si un message d'erreur est affiché
+    On Error Resume Next
     Set errorMessage = session.findById("wnd[0]/sbar")
-    
-    If errorMessage.MessageType = "E" Then
+    Set errorWindow = session.findById("wnd[1]")
+    On Error GoTo 0
+
+    If errorMessage.MessageType = "E" Or (Not errorWindow Is Nothing) Then
         ' Cliquer sur le bouton "OK" du message d'erreur
-        session.findById("wnd[0]").sendVKey 0
-        
+        On Error Resume Next
+        session.findById("wnd[1]/tbar[0]/btn[0]").press
+        On Error GoTo 0
+
         ' Forcer la fermeture de l'application SAP
         Dim objShell
         Set objShell = CreateObject("WScript.Shell")
