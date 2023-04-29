@@ -121,3 +121,47 @@ If sapClosed Then
     MsgBox "SAP a été fermé en raison d'une erreur dans le script."
 End If
 
+
+
+' Script de surveillance (Monitor.vbs)
+Dim objShell, objExec, sapClosed, inactivityCounter, timeout, checkInterval
+
+sapClosed = False
+inactivityCounter = 0
+timeout = 300000 ' Temps d'inactivité en millisecondes (5 minutes dans cet exemple)
+checkInterval = 1000 ' Intervalle de vérification en millisecondes (1 seconde dans cet exemple)
+
+Set objShell = CreateObject("WScript.Shell")
+
+' Exécuter le script principal
+Set objExec = objShell.Exec("wscript MainScript.vbs")
+
+' Surveiller le script principal pour détecter les erreurs et vérifier l'inactivité
+Do
+    If objExec.Status = 0 Then
+        inactivityCounter = inactivityCounter + checkInterval
+        If inactivityCounter >= timeout Then
+            objShell.Run "taskkill /F /IM saplogon.exe", 0, True
+            sapClosed = True
+            Exit Do
+        End If
+        WScript.Sleep checkInterval
+    Else
+        Exit Do
+    End If
+Loop
+
+' Si une erreur se produit, fermer SAP
+If objExec.ExitCode <> 0 Then
+    objShell.Run "taskkill /F /IM saplogon.exe", 0, True
+    sapClosed = True
+End If
+
+Set objExec = Nothing
+Set objShell = Nothing
+
+' Afficher un message si SAP a été fermé en raison d'une erreur ou d'inactivité
+If sapClosed Then
+    MsgBox "SAP a été fermé en raison d'une erreur dans le script ou d'un temps d'inactivité dépassé."
+End If
+
