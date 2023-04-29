@@ -1,48 +1,3 @@
-' Fonction pour envoyer des e-mails
-Function SendEmail(subject, body)
-    Dim objMessage, schema
-    schema = "http://schemas.microsoft.com/cdo/configuration/"
-    Set objMessage = CreateObject("CDO.Message")
-
-    With objMessage.Configuration.Fields
-        .Item(schema & "sendusing") = 2
-        .Item(schema & "smtpserver") = "smtp.gmail.com"
-        .Item(schema & "smtpserverport") = 587
-        .Item(schema & "smtpauthenticate") = 1
-        .Item(schema & "sendusername") = "your.email@gmail.com"
-        .Item(schema & "sendpassword") = "your_password"
-        .Item(schema & "smtpusessl") = True
-        .Update
-    End With
-
-    With objMessage
-        .From = "your.email@gmail.com"
-        .To = "recipient.email@example.com"
-        .Subject = subject
-        .TextBody = body
-        .Send
-    End With
-End Function
-
-' Fonction pour vérifier les erreurs
-Function CheckForErrors()
-    Dim errorMessage
-    Set errorMessage = session.findById("wnd[0]/sbar")
-
-    If errorMessage.MessageType = "E" Then
-        ' Cliquer sur le bouton "OK" du message d'erreur
-        session.findById("wnd[0]").sendVKey 0
-
-        ' Envoyer un e-mail en cas d'erreur
-        SendEmail "Erreur lors de l'extraction SAP", "Une erreur s'est produite lors de l'extraction SAP : " & errorMessage.Text
-
-        CheckForErrors = True
-    Else
-        CheckForErrors = False
-    End If
-End Function
-
-' Initialisation de la connexion SAP
 If Not IsObject(application) Then
     Set SapGuiAuto = GetObject("SAPGUI")
     Set application = SapGuiAuto.GetScriptingEngine
@@ -66,12 +21,30 @@ If session.children.count > 1 Then
     session.findById("wnd[1]/tbar[0]/btn[0]").press
 End If
 
-' Naviguer vers la transaction LS24
-session.findById("wnd[0]/tbar[0]/okcd").Text = "/nLS24"
-session.findById("wnd[0]").sendVKey 0
+' Préparer la date pour le nom de fichier
+Dim xlapp, crnt_yr, crnt_day, crnt_mnth
+crnt_yr = Year(Now)
+If Day(Now) > 9 Then
+    crnt_day = Day(Now)
+Else
+    crnt_day = "0" & Day(Now)
+End If
+If Month(Now) > 9 Then
+    crnt_mnth = Month(Now)
+Else
+    crnt_mnth = "0" & Month(Now)
+End If
 
-' Extraire les données et les exporter
-' Utilisez le code d'extraction et d'exportation ici, en fonction de vos besoins
+' Extraire et exporter les données
+On Error Resume Next
+Set xlapp = GetObject(, "Excel.Application")
+n = xlapp.Worksheets.Count
+xlapp.Application.DisplayAlerts = False
+xlapp.Worksheets(n).SaveAs("G:\Drive\..\Test_" & crnt_yr & "_" & crnt_mnth & "_" & crnt_day & ".xlsx")
+While xlapp.Worksheets.Count <> n
+    Wend
+session.findById("wnd[1]/tbar[0]/btn[0]").press
+On Error GoTo 0
 
 ' Fermer la transaction
 session.findById("wnd[0]/tbar[0]/okcd").text = "/n"
@@ -79,5 +52,20 @@ session.findById("wnd[0]").sendVKey 0
 Wscript.Sleep 2000
 session.findById("wnd[0]").sendVKey 15
 
-' Vérifier les erreurs après la fermeture de la transaction
-If CheckForErrors() Then Exit Sub
+
+' Ajout du code pour gérer les messages d'erreur
+Do
+    ' Vérifier si un message d'erreur est affiché
+    Dim errorMessage
+    Set errorMessage = session.findById("wnd[0]/sbar")
+    If errorMessage.MessageType = "E" Then
+        ' Cliquer sur le bouton "OK" du message d'erreur
+        session.findById("wnd[0]").sendVKey 0
+
+        ' Envoyer un e-mail en cas d'erreur
+        SendEmail "Erreur lors de l'extraction SAP", "Une erreur s'est produite lors de l'extraction SAP : " & errorMessage.Text
+    End If
+
+    ' Attendre avant de vérifier à nouveau les messages d'erreur
+    WScript.Sleep 1000
+Loop
