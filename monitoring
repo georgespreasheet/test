@@ -1,5 +1,5 @@
 ' Script de surveillance (Monitor.vbs)
-Dim objShell, objExec, sapClosed, inactivityCounter, timeout, checkInterval, sapLogonPath, retryAttempts, i
+Dim objShell, sapClosed, inactivityCounter, timeout, checkInterval, sapLogonPath, retryAttempts, i
 
 sapClosed = False
 inactivityCounter = 0
@@ -13,37 +13,19 @@ Set objShell = CreateObject("WScript.Shell")
 For i = 1 To retryAttempts
     ' Ouvrir SAP si nécessaire
     If sapClosed Then
-        objShell.Exec """" & sapLogonPath & """"
+        objShell.Run """" & sapLogonPath & """", 1, False
         WScript.Sleep 5000 ' Attendre que SAP s'ouvre (ajustez le temps d'attente si nécessaire)
         sapClosed = False
     End If
-    
-    ' Lancer la fonction test() après la réouverture de SAP
-    test
-    
+
     ' Exécuter le script principal
-    On Error Resume Next
-    Set objExec = objShell.Exec("wscript MainScript.vbs")
-    On Error GoTo 0
-    
+    objShell.Run "wscript MainScript.vbs", 1, True
+
     ' Surveiller le script principal pour détecter les erreurs et vérifier l'inactivité
-    Do
-        If objExec.Status = 0 Then
-            inactivityCounter = inactivityCounter + checkInterval
-            If inactivityCounter >= timeout Then
-                objShell.Run "taskkill /F /IM saplogon.exe", 0, True
-                sapClosed = True
-                Exit Do
-            End If
-            WScript.Sleep checkInterval
-        Else
-            Exit Do
-        End If
-    Loop
-    
-    ' Si une erreur se produit, fermer SAP et tenter à nouveau, si possible
-    If objExec.ExitCode <> 0 Then
+    If Err.Number <> 0 Then
+        ' Si une erreur se produit, fermer SAP et tenter à nouveau, si possible
         objShell.Run "taskkill /F /IM saplogon.exe", 0, True
+        objShell.Run "taskkill /F /IM wscript.exe", 0, True
         sapClosed = True
         If i < retryAttempts Then
             MsgBox "Une erreur s'est produite dans le script. Tentative " & i & " sur " & retryAttempts & ". Essayons à nouveau."
@@ -56,5 +38,4 @@ For i = 1 To retryAttempts
     End If
 Next
 
-Set objExec = Nothing
 Set objShell = Nothing
