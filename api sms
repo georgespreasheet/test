@@ -1,0 +1,20 @@
+Sub SendSMS()
+    Dim objShell, accountSID, authToken, fromNumber, toNumber, message, curlCommand
+
+    ' Remplacez les valeurs suivantes par vos propres informations Twilio
+    accountSID = "your_account_sid"
+    authToken = "your_auth_token"
+    fromNumber = "your_twilio_phone_number"
+    toNumber = "your_phone_number_to_receive_sms"
+    message = "Une erreur s'est produite dans le script."
+
+    curlCommand = "curl -X POST https://api.twilio.com/2010-04-01/Accounts/" & accountSID & "/Messages.json " & _
+                  "-u " & accountSID & ":" & authToken & " " & _
+                  "-d ""Body=" & message & """ " & _
+                  "-d ""From=" & fromNumber & """ " & _
+                  "-d ""To=" & toNumber & """"
+
+    Set objShell = CreateObject("WScript.Shell")
+    objShell.Run curlCommand, 0, True
+    Set objShell = Nothing
+End Sub
