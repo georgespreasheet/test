@@ -1,30 +1,17 @@
 ' Script de surveillance (Monitor.vbs)
-Dim objShell, objExec, sapClosed, inactivityCounter, timeout, checkInterval, sapLogonPath, retryAttempts, i,exitForInactivity
+Dim objShell, objExec, sapClosed, inactivityCounter, timeout, checkInterval, sapLogonPath, retryAttempts, i, exitForInactivity
 
 Sub SAPConnect()
-	UserName = ""
-	PassWord = ""
-	Set Wshell = CreateObject("WScript.Shell")
-	Wshell.run "saplogon.exe , //SHORTCUT=" & chr(34) & "-desc=" & chr(34) & "110 PRD-P01 ECC" & _
-		chr(34) & " -sid=" & chr(34) & "P01" & chr(34) & " -clt=" & chr(34) & "100" & chr(34) & _
-		" -u=" & chr(34) & UserName & chr(34) & " -l=" & chr(34) & "EN" & chr(34) & " -t=" & _
-		chr(34) & "" & chr(34) & " -cmd=" & chr(34) & "" & chr(34) & " -tit=" & chr(34) & _
-		"100 PRD-P01 ECC" & chr(34) & " -trc=" & chr(34) & "" & chr(34) & " -password=" & _
-		chr(34) & PassWord & chr(34)
-	WScript.Sleep 3000
-	Set Wshell = Nothing
+    ' ... (SAPConnect code)
 End Sub
 
 Sub RunSubVBS(SubPath)
-	SAPConnect()
-	Set oWsh = CreateObject("Shell.Application")
-	oWsh.ShellExecute SubPath
+    ' ... (RunSubVBS code)
 End Sub
-
 
 sapClosed = False
 inactivityCounter = 0
-timeout = 15000 ' Temps d'inactivité en millisecondes (5 minutes dans cet exemple)
+timeout = 15000 ' Temps d'inactivité en millisecondes (15 secondes dans cet exemple)
 checkInterval = 1000 ' Intervalle de vérification en millisecondes (1 seconde dans cet exemple)
 sapLogonPath = "C:\Program Files (x86)\SAP\FrontEnd\SAPgui\saplogon.exe" ' Chemin d'accès à SAP Logon (adaptez-le à votre installation)
 retryAttempts = 2 ' Nombre de tentatives (2 tentatives dans cet exemple, dont la première)
@@ -32,31 +19,30 @@ retryAttempts = 2 ' Nombre de tentatives (2 tentatives dans cet exemple, dont la
 Set objShell = CreateObject("WScript.Shell")
 
 For i = 1 To retryAttempts
-	exitForInactivity = False
+    exitForInactivity = False
+
     ' Ouvrir SAP si nécessaire
-    ' If sapClosed Then
-        ' objShell.Exec """" & sapLogonPath & """"
-        ' WScript.Sleep 5000 ' Attendre que SAP s'ouvre (ajustez le temps d'attente si nécessaire)
-        ' sapClosed = False
-    ' End If
-    
-    ' Lancer la fonction test() après la réouverture de SAP
-    
-    
+    If sapClosed Then
+        objShell.Exec """" & sapLogonPath & """"
+        WScript.Sleep 5000 ' Attendre que SAP s'ouvre (ajustez le temps d'attente si nécessaire)
+        SAPConnect()
+        sapClosed = False
+    End If
+
     ' Exécuter le script principal
     On Error Resume Next
     Set objExec = objShell.Exec("wscript ne2.vbs")
     On Error GoTo 0
-    
+
     ' Surveiller le script principal pour détecter les erreurs et vérifier l'inactivité
     Do
         If objExec.Status = 0 Then
             inactivityCounter = inactivityCounter + checkInterval
             If inactivityCounter >= timeout Then
                 objShell.Run ("taskkill /F /IM saplogon.exe")
-				Set objKillMainScript = objShell.Exec("taskkill /F /PID " & objExec.ProcessID)
+                Set objKillMainScript = objShell.Exec("taskkill /F /PID " & objExec.ProcessID)
                 sapClosed = True
-				exitForInactivity=True
+                exitForInactivity = True
                 Exit Do
             End If
             WScript.Sleep checkInterval
@@ -64,21 +50,11 @@ For i = 1 To retryAttempts
             Exit Do
         End If
     Loop
-    
-    ' Si une erreur se produit, fermer SAP et tenter à nouveau, si possible
+
+    ' Si une erreur se produit ou si le script s'est terminé en raison de l'inactivité, relancer la tentative
     If objExec.ExitCode <> 0 Or exitForInactivity Then
-        
         If i < retryAttempts Then
-			sapClosed = True
-			If sapClosed Then
-				objShell.Exec """" & sapLogonPath & """"
-				WScript.Sleep 5000 ' Attendre que SAP s'ouvre (ajustez le temps d'attente si nécessaire)
-				SAPConnect
-				sapClosed = False
-			End If
-			On Error Resume Next
-			Set objExec = objShell.Exec("wscript a.vbs")
-			On Error GoTo 0
+            sapClosed = True
         Else
             objShell.Run ("taskkill /F /IM wscript.exe")
             Exit For
