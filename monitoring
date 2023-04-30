@@ -1,9 +1,30 @@
 ' Script de surveillance (Monitor.vbs)
-Dim objShell, sapClosed, inactivityCounter, timeout, checkInterval, sapLogonPath, retryAttempts, i
+Dim objShell, objExec, sapClosed, inactivityCounter, timeout, checkInterval, sapLogonPath, retryAttempts, i,exitForInactivity
+
+Sub SAPConnect()
+	UserName = "bouhadrc"
+	PassWord = "Vernier.321."
+	Set Wshell = CreateObject("WScript.Shell")
+	Wshell.run "saplogon.exe , //SHORTCUT=" & chr(34) & "-desc=" & chr(34) & "110 PRD-P01 ECC" & _
+		chr(34) & " -sid=" & chr(34) & "P01" & chr(34) & " -clt=" & chr(34) & "100" & chr(34) & _
+		" -u=" & chr(34) & UserName & chr(34) & " -l=" & chr(34) & "EN" & chr(34) & " -t=" & _
+		chr(34) & "" & chr(34) & " -cmd=" & chr(34) & "" & chr(34) & " -tit=" & chr(34) & _
+		"100 PRD-P01 ECC" & chr(34) & " -trc=" & chr(34) & "" & chr(34) & " -password=" & _
+		chr(34) & PassWord & chr(34)
+	WScript.Sleep 3000
+	Set Wshell = Nothing
+End Sub
+
+Sub RunSubVBS(SubPath)
+	SAPConnect()
+	Set oWsh = CreateObject("Shell.Application")
+	oWsh.ShellExecute SubPath
+End Sub
+
 
 sapClosed = False
 inactivityCounter = 0
-timeout = 300000 ' Temps d'inactivité en millisecondes (5 minutes dans cet exemple)
+timeout = 15000 ' Temps d'inactivité en millisecondes (5 minutes dans cet exemple)
 checkInterval = 1000 ' Intervalle de vérification en millisecondes (1 seconde dans cet exemple)
 sapLogonPath = "C:\Program Files (x86)\SAP\FrontEnd\SAPgui\saplogon.exe" ' Chemin d'accès à SAP Logon (adaptez-le à votre installation)
 retryAttempts = 2 ' Nombre de tentatives (2 tentatives dans cet exemple, dont la première)
@@ -11,31 +32,61 @@ retryAttempts = 2 ' Nombre de tentatives (2 tentatives dans cet exemple, dont la
 Set objShell = CreateObject("WScript.Shell")
 
 For i = 1 To retryAttempts
+	exitForInactivity = False
     ' Ouvrir SAP si nécessaire
-    If sapClosed Then
-        objShell.Run """" & sapLogonPath & """", 1, False
-        WScript.Sleep 5000 ' Attendre que SAP s'ouvre (ajustez le temps d'attente si nécessaire)
-        sapClosed = False
-    End If
-
+    ' If sapClosed Then
+        ' objShell.Exec """" & sapLogonPath & """"
+        ' WScript.Sleep 5000 ' Attendre que SAP s'ouvre (ajustez le temps d'attente si nécessaire)
+        ' sapClosed = False
+    ' End If
+    
+    ' Lancer la fonction test() après la réouverture de SAP
+    
+    
     ' Exécuter le script principal
     On Error Resume Next
-    Set objExec = objShell.Exec("wscript MainScript.vbs")
+    Set objExec = objShell.Exec("wscript ne2.vbs")
     On Error GoTo 0
-
+    
     ' Surveiller le script principal pour détecter les erreurs et vérifier l'inactivité
-    If Err.Number <> 0 Then
-        ' Si une erreur se produit, fermer SAP et tenter à nouveau, si possible
-        objShell.Run "taskkill /F /IM saplogon.exe", 0, True
-        Set objKillMainScript = objShell.Exec("taskkill /F /PID " & objExec.ProcessID) ' Fermer le script MainScript.vbs avec objShell.Exec
-        sapClosed = True
-        If i < retryAttempts Then
-            MsgBox "Une erreur s'est produite dans le script. Tentative " & i & " sur " & retryAttempts & ". Essayons à nouveau."
+    Do
+        If objExec.Status = 0 Then
+            inactivityCounter = inactivityCounter + checkInterval
+            If inactivityCounter >= timeout Then
+                objShell.Run ("taskkill /F /IM saplogon.exe")
+				Set objKillMainScript = objShell.Exec("taskkill /F /PID " & objExec.ProcessID)
+                sapClosed = True
+				exitForInactivity=True
+                Exit Do
+            End If
+            WScript.Sleep checkInterval
         Else
-            MsgBox "Le script a échoué après " & retryAttempts & " tentatives. Veuillez vérifier le script et réessayer."
+            Exit Do
+        End If
+    Loop
+    
+    ' Si une erreur se produit, fermer SAP et tenter à nouveau, si possible
+    If objExec.ExitCode <> 0 Or exitForInactivity Then
+        
+        If i < retryAttempts Then
+			sapClosed = True
+			If sapClosed Then
+				objShell.Exec """" & sapLogonPath & """"
+				WScript.Sleep 5000 ' Attendre que SAP s'ouvre (ajustez le temps d'attente si nécessaire)
+				SAPConnect
+				sapClosed = False
+			End If
+			On Error Resume Next
+			Set objExec = objShell.Exec("wscript a.vbs")
+			On Error GoTo 0
+        Else
+            objShell.Run ("taskkill /F /IM wscript.exe")
             Exit For
         End If
     Else
         Exit For
     End If
 Next
+
+Set objExec = Nothing
+Set objShell = Nothing
