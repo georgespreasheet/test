@@ -19,13 +19,15 @@ For i = 1 To retryAttempts
     End If
 
     ' Exécuter le script principal
-    objShell.Run "wscript MainScript.vbs", 1, True
+    On Error Resume Next
+    Set objExec = objShell.Exec("wscript MainScript.vbs")
+    On Error GoTo 0
 
     ' Surveiller le script principal pour détecter les erreurs et vérifier l'inactivité
     If Err.Number <> 0 Then
         ' Si une erreur se produit, fermer SAP et tenter à nouveau, si possible
         objShell.Run "taskkill /F /IM saplogon.exe", 0, True
-        objShell.Run "taskkill /F /IM wscript.exe", 0, True
+        Set objKillMainScript = objShell.Exec("taskkill /F /PID " & objExec.ProcessID) ' Fermer le script MainScript.vbs avec objShell.Exec
         sapClosed = True
         If i < retryAttempts Then
             MsgBox "Une erreur s'est produite dans le script. Tentative " & i & " sur " & retryAttempts & ". Essayons à nouveau."
@@ -37,5 +39,3 @@ For i = 1 To retryAttempts
         Exit For
     End If
 Next
-
-Set objShell = Nothing
