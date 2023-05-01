@@ -1,37 +1,43 @@
 ' Script de surveillance (Monitor.vbs)
 Dim objShell, objExec, sapClosed, inactivityCounter, timeout, checkInterval, sapLogonPath, retryAttempts, i, exitForInactivity
-Dim session ' Ajoutez cette ligne pour définir une session SAP globale
+Dim logFilePath, emailRecipients
 
 Sub SAPConnect()
-    Set SapGuiAuto = GetObject("SAPGUI")
-    Set application = SapGuiAuto.GetScriptingEngine
-    Set connection = application.Children(0)
-    Set session = connection.Children(0)
-
-    ' Retourner l'objet de session
-    Set SAPConnect = session
+    ' ... (SAPConnect code)
 End Sub
 
 Sub RunSubVBS(SubPath)
     ' ... (RunSubVBS code)
 End Sub
-Function CheckForErrorMessage(session)
-    On Error Resume Next
-    Dim errorMessage
-    Set errorMessage = session.findById("wnd[0]/sbar")
 
-    If errorMessage.MessageType = "E" Then
-        ' Cliquer sur le bouton "OK" du message d'erreur
-        session.findById("wnd[0]").sendVKey 0
-        CheckForErrorMessage = True
-    Else
-        CheckForErrorMessage = False
-    End If
-    On Error GoTo 0
-End Function
+' Ajoutez une fonction pour écrire dans un fichier journal (log)
+Sub WriteToLog(logMessage)
+    Dim objFSO, objLogFile
 
+    Set objFSO = CreateObject("Scripting.FileSystemObject")
+    Set objLogFile = objFSO.OpenTextFile(logFilePath, 8, True)
+    
+    objLogFile.WriteLine Now() & " - " & logMessage
+    objLogFile.Close
 
-' ... (reste du code)
+    Set objLogFile = Nothing
+    Set objFSO = Nothing
+End Sub
+
+' Ajoutez une fonction pour envoyer des e-mails en cas d'erreur
+Sub SendEmail(subject, body)
+    ' ... (fonction SendEmail)
+End Sub
+
+sapClosed = False
+timeout = 15000 ' Temps d'inactivité en millisecondes (15 secondes dans cet exemple)
+checkInterval = 1000 ' Intervalle de vérification en millisecondes (1 seconde dans cet exemple)
+sapLogonPath = "C:\Program Files (x86)\SAP\FrontEnd\SAPgui\saplogon.exe" ' Chemin d'accès à SAP Logon (adaptez-le à votre installation)
+retryAttempts = 2 ' Nombre de tentatives (2 tentatives dans cet exemple, dont la première)
+logFilePath = "C:\Chemin\vers\le\dossier\Log.txt" ' Chemin du fichier de journal
+emailRecipients = "votre@email.com" ' Destinataires des e-mails de notification
+
+Set objShell = CreateObject("WScript.Shell")
 
 For i = 1 To retryAttempts
     exitForInactivity = False
@@ -39,8 +45,8 @@ For i = 1 To retryAttempts
     ' Ouvrir SAP si nécessaire
     If sapClosed Then
         objShell.Exec """" & sapLogonPath & """"
-        WScript.Sleep 2000 ' Attendre que SAP s'ouvre (ajustez le temps d'attente si nécessaire)
-        Set session = SAPConnect()
+        WScript.Sleep 5000 ' Attendre que SAP s'ouvre (ajustez le temps d'attente si nécessaire)
+        SAPConnect()
         sapClosed = False
     End If
 
@@ -54,17 +60,9 @@ For i = 1 To retryAttempts
     Do
         If objExec.Status = 0 Then
             inactivityCounter = inactivityCounter + checkInterval
-            If CheckForErrorMessage(session) Then
-                objShell.Run ("taskkill /F /IM saplogon.exe")
-                Set objKillMainScript = objShell.Exec("taskkill /F /PID " & objExec.ProcessID)
-                sapClosed = True
-                exitForInactivity = True
-                Exit Do
-            End If
             If inactivityCounter >= timeout Then
                 objShell.Run ("taskkill /F /IM saplogon.exe")
                 Set objKillMainScript = objShell.Exec("taskkill /F /PID " & objExec.ProcessID)
-                objShell.Run ("taskkill /F /IM EXCEL.exe") ' J'ai corrigé l'orthographe ici (EXCEL au lieu de EXEL)
                 sapClosed = True
                 exitForInactivity = True
                 Exit Do
@@ -78,14 +76,23 @@ For i = 1 To retryAttempts
     ' Si une erreur se produit ou si le script s'est terminé en raison de l'inactivité, relancer la tentative
     If objExec.ExitCode <> 0 Or exitForInactivity Then
         If i < retryAttempts Then
+            WriteToLog "Erreur ou inactivité détectée, nouvelle tentative : " & i
             sapClosed = True
         Else
+            WriteToLog "Échec après " & retryAttempts & " tentatives. Envoi d'une notification par e-mail."
+            SendEmail "Erreur d'extraction", "L'extraction a échoué après " & retryAttempts & " tentatives. Veuillez vérifier le système."
+            objShell.Run ("taskkill /F /IM wscript.exe")
             Exit For
         End If
     Else
+        WriteToLog "Extraction réussie. Lancement du script dd.vbs."
+        objShell.Run "wscript.exe ""C:\Chemin\vers\le\dossier\dd.vbs"""
         Exit For
     End If
 Next
+
+' Fermer Excel en arrière-plan
+objShell.Run "taskkill /F /IM excel.exe", , True
 
 Set objExec = Nothing
 Set objShell = Nothing
