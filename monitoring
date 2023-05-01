@@ -11,17 +11,23 @@ Sub RunSubVBS(SubPath)
 End Sub
 
 ' Ajoutez une fonction pour écrire dans un fichier journal (log)
-Sub WriteToLog(logMessage)
-    Dim objFSO, objLogFile
+Sub WriteToLog(message)
+    Dim fso, logFile, logFilePath
 
-    Set objFSO = CreateObject("Scripting.FileSystemObject")
-    Set objLogFile = objFSO.OpenTextFile(logFilePath, 8, True)
-    
-    objLogFile.WriteLine Now() & " - " & logMessage
-    objLogFile.Close
+    logFilePath = "C:\Chemin\vers\le\dossier\logfile.txt" ' Spécifiez le chemin du fichier de journalisation
 
-    Set objLogFile = Nothing
-    Set objFSO = Nothing
+    Set fso = CreateObject("Scripting.FileSystemObject")
+    If fso.FileExists(logFilePath) Then
+        Set logFile = fso.OpenTextFile(logFilePath, 8, True) ' Ouvrir le fichier en mode Append (8)
+    Else
+        Set logFile = fso.CreateTextFile(logFilePath, True) ' Créer le fichier s'il n'existe pas
+    End If
+
+    logFile.WriteLine Now & " - " & message ' Écrire le message avec un horodatage
+    logFile.Close ' Fermer le fichier
+
+    Set logFile = Nothing
+    Set fso = Nothing
 End Sub
 
 ' Ajoutez une fonction pour envoyer des e-mails en cas d'erreur
