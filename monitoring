@@ -8,6 +8,15 @@ End Sub
 Sub RunSubVBS(SubPath)
     ' ... (RunSubVBS code)
 End Sub
+Sub ClickOKOnError(session)
+    Dim errorMessage
+    Set errorMessage = session.findById("wnd[0]/sbar")
+
+    If errorMessage.MessageType = "E" Then
+        ' Cliquer sur le bouton "OK" du message d'erreur
+        session.findById("wnd[0]").sendVKey 0
+    End If
+End Sub
 
 sapClosed = False
 inactivityCounter = 0
