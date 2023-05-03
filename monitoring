@@ -102,3 +102,61 @@ objShell.Run "taskkill /F /IM excel.exe", , True
 
 Set objExec = Nothing
 Set objShell = Nothing
+
+
+//////////////
+
+Set objShell = CreateObject("WScript.Shell")
+
+For i = 1 To retryAttempts
+    exitForInactivity = False
+
+    ' Ouvrir SAP si nécessaire
+    If sapClosed Then
+        objShell.Exec """" & sapLogonPath & """"
+        WScript.Sleep 5000 ' Attendre que SAP s'ouvre (ajustez le temps d'attente si nécessaire)
+        SAPConnect()
+        sapClosed = False
+    End If
+
+    ' Exécuter le script principal
+    On Error Resume Next
+    exitCode = objShell.Run("wscript ""ne2.vbs""", , True)
+    On Error GoTo 0
+
+    ' Surveiller le script principal pour détecter les erreurs et vérifier l'inactivité
+    inactivityCounter = 0
+    Do
+        If exitCode = 259 Then ' 259 signifie que le processus est en cours d'exécution
+            inactivityCounter = inactivityCounter + checkInterval
+            If inactivityCounter >= timeout Then
+                objShell.Run ("taskkill /F /IM saplogon.exe")
+                objShell.Run ("taskkill /F /IM wscript.exe /FI ""WindowTitle eq ne2.vbs""", , True)
+                sapClosed = True
+                exitForInactivity = True
+                Exit Do
+            End If
+            WScript.Sleep checkInterval
+        Else
+            Exit Do
+        End If
+    Loop
+
+    ' Si une erreur se produit ou si le script s'est terminé en raison de l'inactivité, relancer la tentative
+    If exitCode <> 0 Or exitForInactivity Then
+        If i < retryAttempts Then
+            WriteToLog "Erreur ou inactivité détectée, nouvelle tentative : " & i
+            sapClosed = True
+        Else
+            WriteToLog "Échec après " & retryAttempts & " tentatives. Envoi d'une notification par e-mail."
+            SendEmail "Erreur d'extraction", "L'extraction a échoué après " & retryAttempts & " tentatives. Veuillez vérifier le système."
+            objShell.Run ("taskkill /F /IM wscript.exe")
+            Exit For
+        End If
+    Else
+        WriteToLog "Extraction réussie. Lancement du script dd.vbs."
+        objShell.Run "wscript.exe ""C:\Chemin\vers\le\dossier\dd.vbs"""
+        Exit For
+    End If
+Next
+
