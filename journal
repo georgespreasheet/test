@@ -1,0 +1,42 @@
+Option Explicit
+Dim objShell, exitCode, lastModified, currentTime, inactivityCounter, checkInterval, timeout
+Dim logFile, logFileObj, fso, ne2Script
+
+checkInterval = 1000 ' Vérifier l'inactivité toutes les 1000 ms (1 seconde)
+timeout = 60000 ' Timeout après 60000 ms (60 secondes) d'inactivité
+
+' Chemin vers le fichier journal de ne2.vbs
+logFile = "C:\path\to\ne2_log.txt"
+' Chemin vers le script ne2.vbs
+ne2Script = "C:\path\to\ne2.vbs"
+
+Set objShell = CreateObject("WScript.Shell")
+Set fso = CreateObject("Scripting.FileSystemObject")
+
+' Exécuter ne2.vbs et attendre qu'il se termine
+exitCode = objShell.Run("wscript """ & ne2Script & """", , True)
+
+If exitCode <> 0 Then
+    ' Le script s'est terminé avec une erreur
+    WScript.Echo "ne2.vbs a rencontré une erreur. Code de sortie : " & exitCode
+Else
+    ' Le script s'est terminé avec succès
+    WScript.Echo "ne2.vbs s'est terminé avec succès."
+End If
+
+' Surveiller l'inactivité de ne2.vbs en vérifiant le fichier journal
+Do
+    If fso.FileExists(logFile) Then
+        Set logFileObj = fso.GetFile(logFile)
+        currentTime = Now
+        lastModified = logFileObj.DateLastModified
+
+        If DateDiff("s", lastModified, currentTime) * 1000 > timeout Then
+            ' Le fichier journal n'a pas été mis à jour depuis le délai d'inactivité
+            WScript.Echo "Inactivité détectée dans ne2.vbs. Arrêt du script."
+            objShell.Run "taskkill /F /IM wscript.exe /FI ""WindowTitle eq ne2.vbs""", , True
+            Exit Do
+        End If
+    End If
+    WScript.Sleep checkInterval
+Loop
