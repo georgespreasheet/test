@@ -1,0 +1,41 @@
+On Error Resume Next
+
+' Exécutez la transaction LS24
+sapSession.findById("wnd[0]").maximize
+sapSession.findById("wnd[0]/tbar[0]/okcd").Text = "/nLS24"
+sapSession.findById("wnd[0]").sendVKey 0
+
+' Vérifiez si une erreur s'est produite lors de l'exécution de la transaction
+If Err.Number <> 0 Then
+    WScript.Echo "Erreur lors de l'exécution de la transaction LS24: " & Err.Description
+    sapSession.findById("wnd[0]/tbar[0]/btn[12]").press
+    WScript.Quit(Err.Number)
+End If
+On Error GoTo 0
+
+Option Explicit
+
+' ... (déclarations de variables et connexion à SAP) ...
+
+' Exécutez la transaction LS24
+sapSession.StartTransaction "LS24"
+
+' Entrez les valeurs et exécutez la transaction
+sapSession.findById("wnd[0]/usr/ctxtS_MATNR-LOW").Text = "MATNR_VALUE"
+sapSession.findById("wnd[0]/usr/ctxtS_LGNUM-LOW").Text = "LGNUM_VALUE"
+sapSession.findById("wnd[0]/usr/ctxtS_WERKS-LOW").Text = "WERKS_VALUE"
+sapSession.findById("wnd[0]/tbar[1]/btn[8]").press
+
+' Vérifiez les erreurs après l'exécution de la transaction
+CheckError "Exécution de la transaction LS24"
+
+' ... (traitement des résultats et autres actions) ...
+
+' Fonction de vérification des erreurs
+Sub CheckError(actionDescription)
+    If Err.Number <> 0 Then
+        WScript.Echo "Erreur lors de l'exécution de l'action suivante : " & actionDescription & ": " & Err.Description
+        sapSession.findById("wnd[0]/tbar[0]/btn[12]").press
+        WScript.Quit(Err.Number)
+    End If
+End Sub
