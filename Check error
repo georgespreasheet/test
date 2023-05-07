@@ -1,5 +1,5 @@
 Option Explicit
-Dim objShell, objExec, strExtractionScript, strOutput
+Dim objShell, objExec, strExtractionScript, strOutput, blnErrorDetected
 
 strExtractionScript = "C:\scripts\extraction.vbs" ' Spécifiez le chemin d'accès complet au fichier extraction.vbs
 Set objShell = CreateObject("WScript.Shell")
@@ -8,19 +8,19 @@ Set objShell = CreateObject("WScript.Shell")
 Set objExec = objShell.Exec("cscript.exe //NoLogo " & strExtractionScript)
 
 strOutput = ""
+blnErrorDetected = False
 
-' Lisez la sortie d'erreur standard en temps réel et attendez que le script se termine
-Do While objExec.Status = 0
+' Lisez la sortie d'erreur standard en temps réel et traitez les erreurs immédiatement lorsqu'elles sont détectées
+Do While objExec.Status = 0 Or Not objExec.StdErr.AtEndOfStream
     If Not objExec.StdErr.AtEndOfStream Then
-        strOutput = strOutput & objExec.StdErr.ReadLine() & vbCrLf
+        strOutput = objExec.StdErr.ReadLine()
+        WScript.Echo "Erreur détectée dans le script d'extraction : " & vbCrLf & strOutput
+        blnErrorDetected = True
     End If
     WScript.Sleep 100
 Loop
 
-' Vérifiez s'il y a des erreurs
-If Len(strOutput) > 0 Then
-    ' Insérez ici le code pour gérer l'erreur (par exemple, enregistrer l'erreur dans un fichier, envoyer un e-mail, etc.)
-    WScript.Echo "Erreur détectée dans le script d'extraction : " & vbCrLf & strOutput
-Else
+' Affichez un message si aucune erreur n'a été détectée
+If Not blnErrorDetected Then
     WScript.Echo "Exécution du script d'extraction réussie, aucun code d'erreur."
 End If
