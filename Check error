@@ -24,3 +24,52 @@ Loop
 If Not blnErrorDetected Then
     WScript.Echo "Exécution du script d'extraction réussie, aucun code d'erreur."
 End If
+
+
+
+
+
+' extraction.vbs
+On Error Resume Next
+
+' Votre code d'extraction ici
+
+If Err.Number <> 0 Then
+    Dim objFSO, objLogFile
+    Set objFSO = CreateObject("Scripting.FileSystemObject")
+    Set objLogFile = objFSO.OpenTextFile("C:\path\to\error_log.txt", 8, True)
+    
+    objLogFile.WriteLine "Erreur " & Err.Number & ": " & Err.Description & " sur la ligne " & Err.Line
+    objLogFile.Close
+End If
+
+
+
+
+' monitor.vbs
+Option Explicit
+Dim objFSO, objLogFile, strLogFilePath, intLastPosition
+
+strLogFilePath = "C:\path\to\error_log.txt"
+Set objFSO = CreateObject("Scripting.FileSystemObject")
+
+If Not objFSO.FileExists(strLogFilePath) Then
+    Set objLogFile = objFSO.CreateTextFile(strLogFilePath, True)
+    objLogFile.Close
+End If
+
+intLastPosition = objFSO.GetFile(strLogFilePath).Size
+
+Do
+    Set objLogFile = objFSO.OpenTextFile(strLogFilePath, 1, False)
+    objLogFile.Skip(intLastPosition)
+    
+    Do While Not objLogFile.AtEndOfStream
+        WScript.Echo objLogFile.ReadLine()
+    Loop
+    
+    intLastPosition = objLogFile.Position
+    objLogFile.Close
+    
+    WScript.Sleep 1000
+Loop
