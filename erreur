@@ -1,0 +1,26 @@
+Dim objShell, objExec, strOutput, strError
+
+Set objShell = CreateObject("WScript.Shell")
+Set objExec = objShell.Exec("cscript.exe //NoLogo votre_script.vbs")
+
+' Lire la sortie standard
+Do While Not objExec.StdOut.AtEndOfStream
+    strOutput = objExec.StdOut.ReadLine
+    ' Traitez la sortie standard comme vous le souhaitez (affichage, enregistrement, etc.)
+    WScript.Echo "Sortie : " & strOutput
+Loop
+
+' Lire les erreurs
+Do While Not objExec.StdErr.AtEndOfStream
+    strError = objExec.StdErr.ReadLine
+    ' Traitez les erreurs comme vous le souhaitez (affichage, enregistrement, etc.)
+    WScript.Echo "Erreur : " & strError
+Loop
+
+' Attendre la fin de l'exécution du script
+Do While objExec.Status = 0
+    WScript.Sleep 100
+Loop
+
+Set objExec = Nothing
+Set objShell = Nothing
