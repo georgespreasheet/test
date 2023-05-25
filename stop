@@ -1,0 +1,22 @@
+Public stopScript As Boolean
+
+Sub StartScript()
+    ' Initialiser stopScript à False
+    stopScript = False
+
+    ' Planifier l'arrêt du script pour dans 5 minutes
+    Application.OnTime Now + TimeValue("00:05:00"), "StopScript"
+
+    ' Boucle de script
+    Do While Not stopScript
+        ' Votre code ici
+
+        ' Pause pour ne pas monopoliser le processeur
+        Application.Wait (Now + TimeValue("0:00:01"))
+    Loop
+End Sub
+
+Sub StopScript()
+    ' Mettre stopScript à True
+    stopScript = True
+End Sub
