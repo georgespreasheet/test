@@ -1,0 +1,80 @@
+function tett() {
+  var folderId = "1eSRnoUmJ0uomi3_ckMUklGKE1RM9BQkE";
+  var destinationFileId = "1EMk3ThGIV61JEgivtY_G46nbi76lv0MX25if6-NQcQY";
+  
+  var folder = DriveApp.getFolderById(folderId);
+  var destinationFile = SpreadsheetApp.openById(destinationFileId);
+  var destinationS = destinationFile.getSheetByName("data");
+  
+  var files = folder.getFiles();
+  
+  while (files.hasNext()) {
+    var file = files.next();
+    var nameFile = file.getName();
+    var idFile = file.getId();
+    var urlFile = file.getUrl();
+  
+    var trouve = nameFile.search("Annuaire de l’administration");
+
+    if (trouve !== -1) {
+      var destinationRange = destinationS.getRange("A:B");
+      var destinationData = destinationRange.getValues();
+      var destinationMap = new Map();
+  
+      for (var i = 0; i < destinationData.length; i++) {
+        var key = destinationData[i][0];
+        var value = destinationData[i][1];
+        
+        if (destinationMap.has(key)) {
+          destinationMap.set(key, destinationMap.get(key) + value); // Additionne les valeurs
+        } else {
+          destinationMap.set(key, value);
+        }
+      }
+      Logger.log(`Le fichier ${nameFile} (id: ${idFile}) est éditable`);
+      
+      var ss = SpreadsheetApp.openById(idFile);
+      var sheet = ss.getActiveSheet().getName();
+      
+      if (sheet === "Data") {
+        var dataSheet = ss.getSheetByName("Data");
+        var valueRange = dataSheet.getDataRange();
+        var valueData = valueRange.getValues();
+
+        var sourceMap = new Map();
+
+        for (var i = 1; i < valueData.length; i++) {
+          var key2 = valueData[i][0]; // Clé pour la correspondance
+          var value2 = valueData[i][5]; // Valeur de la colonne 7
+          
+          if (sourceMap.has(key2)) {
+            sourceMap.set(key2, sourceMap.get(key2) + value2); // Additionne les valeurs
+          } else {
+            sourceMap.set(key2, value2);
+          }
+        }
+
+        for (var [key, value] of destinationMap) {
+          var sourceValue = sourceMap.get(key);
+          
+          if (sourceValue !== undefined) {
+            //console.log(`La valeur "${sourceValue}" a été trouvée dans la source pour la clé "${key}".`);
+            destinationMap.set(key, sourceValue + value); // Additionne les valeurs pour la même clé
+          }
+        }
+
+        // Convertir la destinationMap en tableau 2D pour coller les valeurs mises à jour
+        var updatedValues = Array.from(destinationMap, ([key, value]) => [key, value]);
+
+        // Obtenir la plage cible dans la feuille de calcul
+        var range = destinationS.getRange(1, 1, updatedValues.length, updatedValues[0].length);
+
+        // Coller toutes les valeurs mises à jour en une seule fois
+        range.setValues(updatedValues);
+        SpreadsheetApp.flush();
+      }
+    }
+  }
+  
+  SpreadsheetApp.flush();
+}
